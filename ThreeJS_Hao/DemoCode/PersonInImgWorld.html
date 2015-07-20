@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>In the middle of the Galaxy</title>
+    <!--Load Libs-->
+    <script src="../libs/three.js"></script>
+    <script src="../libs/FirstPersonControls.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<script> //here comes the code
+
+//gloabal variables
+var renderer;
+var scene;
+var camera;
+var control;
+var cameraControl;
+var boxMesh;
+var clock = new THREE.Clock();
+var elements = 5000;
+var objContainer = new Array(elements);
+var raycaster, mouse, IntersectedObj;
+
+function init(){ //Three.js initialization code
+    //Object is the container that will hold all objects which we want to render
+    scene = new THREE.Scene();
+
+    //THREE.PerspectiveCamera determines what we see
+    camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 10000);
+    camera.position.x = 35;
+    camera.position.y = 36;
+    camera.position.z = 33;
+    camera.lookAt(scene.position);
+
+    //First Person Control
+    cameraControl = new THREE.FirstPersonControls( camera );
+    cameraControl.movementSpeed = 100;
+    cameraControl.lookSpeed = 0.1;
+
+    //Three.JS Object which renders the THREE.Scene
+    renderer =  new THREE.WebGLRenderer();
+    renderer.setClearColor(0x000000, 1.0);
+    renderer.setSize(window.innerWidth, window.innerHeight);
+    renderer.shadowMapEnabled = true;
+
+    //RayCaster Obj & mouse
+    raycaster = new THREE.Raycaster();
+    mouse = new THREE.Vector2();
+
+    //Create Spotlight
+    var spotLight = new THREE.SpotLight(0xffffff);
+    spotLight.position.set(10, 20, 20);
+    spotLight.castShadow = true;
+    scene.add(spotLight);
+
+    //Create Random Cubes
+    var planeGeometry = new THREE.PlaneBufferGeometry(10, 10);
+    IntersectedObj = new THREE.Mesh(planeGeometry, new THREE.MeshBasicMaterial());
+    for (var i = 0; i < elements; i ++) {
+        var object = new THREE.Mesh(planeGeometry, new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff, map: THREE.ImageUtils.loadTexture('assets/textures/Kai-Barthel.jpg'), transparent: true, opacity: 0.8 } ) );
+        object.position.x = 2*(Math.random() * 500)-500;
+        object.position.y = 2*(Math.random() * 500)-500;
+        object.position.z = 2*(Math.random() * 500)-500;
+        object.lookAt(camera.position);
+        scene.add(object);
+        objContainer[i] = object;
+
+    }
+
+    var materials = [
+
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } ), // right
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } ), // left
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } ), // top
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } ), // bottom
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } ), // back
+        new THREE.MeshBasicMaterial( { map: THREE.ImageUtils.loadTexture('assets/textures/testText.jpg' ) } )  // front
+
+    ];
+
+    boxMesh = new THREE.Mesh( new THREE.BoxGeometry( 1000, 1000, 1000), new THREE.MeshFaceMaterial(materials) );
+    boxMesh.scale.x = - 1;
+    //scene.add(boxMesh);
+
+    //Create Controler Obj
+    control = new function(){
+    }
+
+    //Add GUI and Stats
+    addStatsObj();
+    addControlGui(control);
+
+    window.addEventListener( 'mousemove', onMouseMove, false );
+    document.body.appendChild(renderer.domElement);
+    render();
+}
+
+//Create Stats
+function addStatsObj(){
+    stats = new Stats();
+    stats.setMode(0);
+
+    stats.domElement.style.position = 'absolute';
+    stats.domElement.style.left = '0px';
+    stats.domElement.style.top = '0px';
+
+    document.body.appendChild( stats.domElement );
+}
+
+//Create GUI
+function addControlGui(controlObj){
+    var gui = new dat.GUI();
+    //gui.add(controlObj, "", x, y);
+
+}
+
+function onMouseMove( event ) {
+    mouse.x = ( event.clientX / window.innerWidth ) * 2 - 1;
+    mouse.y = - ( event.clientY / window.innerHeight ) * 2 + 1;
+
+}
+
+function render() {
+    stats.update();
+    cameraControl.update(clock.getDelta());
+    for(var i=0; i<elements; i++){
+        objContainer[i].lookAt(camera.position);
+    }
+
+    raycaster.setFromCamera( mouse, camera );
+    var intersects = raycaster.intersectObjects( scene.children );
+    if ( intersects.length > 0) {
+            if( IntersectedObj != intersects[0].object ) {
+                IntersectedObj.scale.set(1,1,1);
+            }
+        IntersectedObj = intersects[0].object;
+        IntersectedObj.scale.set(2, 2, 2);
+
+        //intersects[0].object.material.color.set(0xffffff);
+        //intersects[0].object.scale.set(2,2,2);
+    }
+    // render using requestAnimationFrame
+    renderer.render(scene, camera);
+    requestAnimationFrame(render);
+}
+
+window.onload = init; //calls init() function after the document is loaded
+</script>
+<body>
+</body>
+</html>
