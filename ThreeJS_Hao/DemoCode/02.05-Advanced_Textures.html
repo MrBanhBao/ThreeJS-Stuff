@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>02.05 Advanced Textures</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/EffectComposer.js"></script>
+    <script src="../libs/RenderPass.js"></script>
+    <script src="../libs/CopyShader.js"></script>
+    <script src="../libs/ShaderPass.js"></script>
+    <script src="../libs/MaskPass.js"></script>
+    <style>
+        body{
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<script>
+    var scene;
+    var renderer;
+    var camera;
+    var cameraControl;
+
+
+    //Background Stuff
+    var cameraBG;
+    var sceneBG;
+
+    function init(){
+        //CREATING SCENE
+        scene = new THREE.Scene();
+
+        //CREATING RENDERER
+        renderer = new THREE.WebGLRenderer();
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMapEnabled = true;
+
+        //CREATING CAMERA
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth/window.innerHeight, 0.1, 1000);
+        camera.position.x = 25;
+        camera.position.y = 10;
+        camera.position.z = 23;
+        camera.lookAt(scene.position);
+
+        //Add Camera Control
+        cameraControl = new THREE.OrbitControls(camera);
+
+        //CREATING SPHERE
+        var sphereGeometry = new THREE.SphereGeometry(15, 60, 60);
+        var sphereMaterial = createEarthMaterial();
+        var earth =  new THREE.Mesh(sphereGeometry, sphereMaterial);
+        earth.castShadow = true;
+        earth.name = "earth";
+        scene.add(earth);
+
+        //CREATING SPHERE FOR CLOUDS
+        var cloudsGeometry = new THREE.SphereGeometry(15.5, 60, 60);
+        var cloudsMaterial = createCloudMaterial();
+        var clouds =  new THREE.Mesh(cloudsGeometry, cloudsMaterial);
+        clouds.castShadow = true;
+        clouds.name = "clouds";
+        scene.add(clouds);
+
+        //CREATING LIGHTS
+        var ambientLight = new THREE.AmbientLight(0x111111);
+        scene.add(ambientLight);
+
+        var directionalLight = new THREE.DirectionalLight(0xffffff, 1);
+        directionalLight.position.set(100,10,-50);
+        directionalLight.name= "directional";
+        scene.add(directionalLight);
+
+        //CREATING CONTROL OBJECT
+        control = new function () {
+            this.rotationSpeed = 0.001;
+        };
+
+        //---!!! CREATING BACKGROUND !!!---//
+        //Cuboid Area
+        cameraBG = new THREE.OrthographicCamera(-window.innerWidth, window.innerWidth, window.innerHeight, -window.innerHeight, -10000, 10000);
+        cameraBG.position.z = 50;
+        sceneBG = new THREE.Scene();
+
+        //Creating Material with Texture
+        var materialColor = new THREE.MeshBasicMaterial({ map: THREE.ImageUtils.loadTexture("../assets/textures/planets/starry_background.jpg"), depthTest: false });
+        var bgPlane = new THREE.Mesh(new THREE.PlaneGeometry(1, 1), materialColor);
+        bgPlane.position.z = -100;
+        bgPlane.scale.set(window.innerWidth * 2, window.innerHeight * 2, 1);
+        sceneBG.add(bgPlane);
+
+        //SETUP PASSES & EFFECTCOMPOSER
+        //setup passes
+        var bgPass = new THREE.RenderPass(sceneBG, cameraBG);
+        var renderPass = new THREE.RenderPass(scene, camera);
+        renderPass.clear = false;
+        //Once scenes have been rendered, we need to copy them to screen with the CopyShader Obj
+        var effectCopy = new THREE.ShaderPass(THREE.CopyShader);
+        effectCopy.renderToScreen = true;
+
+        //add passes to composer
+        composer = new THREE.EffectComposer(renderer);
+        composer.addPass(bgPass);
+        composer.addPass(renderPass);
+        composer.addPass(effectCopy);
+
+
+        addControlGUI(control);
+
+        document.body.appendChild(renderer.domElement);
+        render();
+    }
+
+    function createEarthMaterial(){
+        var earthTexture = new THREE.ImageUtils.loadTexture("../assets/textures/planets/earthmap4k.jpg");
+
+        //Texture
+        var earthMaterial = new THREE.MeshPhongMaterial(); // "Phong-Material" reacts to light sources, wheter MeshBasicMaterial does not
+        earthMaterial.map =  earthTexture;
+
+        //Normal Mapping - Calculate Reflection by orientation of every pixel
+        var normalMap = new THREE.ImageUtils.loadTexture("../assets/textures/planets/earth_normalmap_flat4k.jpg");
+        earthMaterial.normalMap = normalMap;
+        earthMaterial.normalScale = new THREE.Vector2(0.6, 0.8); //scales normale (intensity)
+
+        //Specular Mapping - Stores how well the pixel can reflect light (black: no reflection | white: high relfection)
+        var specularMap = new THREE.ImageUtils.loadTexture("../assets/textures/planets/earthspec4k.jpg");
+        earthMaterial.specularMap = specularMap;
+        earthMaterial.specular = new THREE.Color(0x262626); //Color of reflection
+
+        return earthMaterial;
+    }
+
+    function createCloudMaterial(){
+        var cloudTexture = new THREE.ImageUtils.loadTexture("../assets/textures/planets/fair_clouds_4k.png");
+        var cloudMaterial = new THREE.MeshPhongMaterial();
+        cloudMaterial.map =  cloudTexture;
+        cloudMaterial.transparent = true;
+        return cloudMaterial;
+    }
+
+
+    function addControlGUI(controlObj){
+        var gui = new dat.GUI();
+        gui.add(controlObj, "rotationSpeed", -0.01, 0.01);
+    }
+
+
+
+    function render(){
+        //!!! Add Update Fnc for Camera Controler
+        cameraControl.update();
+        scene.getObjectByName("earth").rotation.y += control.rotationSpeed;
+        scene.getObjectByName("clouds").rotation.y += control.rotationSpeed*1.5;
+
+        renderer.autoClear = false; //If we don't do this, we'll only see the result from the latest THREE.RenderPass object
+        composer.render(); //render the centent of composer
+        requestAnimationFrame(render);
+    }
+
+    window.onload = init;
+</script>
+<body>
+</body>
+</html>

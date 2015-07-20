@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <title>Random Animator</title>
+    <script src="../libs/three.js"></script>
+    <script src="../libs/dat.gui.min.js"></script>
+    <script src="../libs/OrbitControls.js"></script>
+    <script src="../libs/stats.min.js"></script>
+    <script src="../libs/tween.min.js"></script>
+    <style>
+        body {
+            margin: 0;
+            overflow: hidden;
+        }
+    </style>
+</head>
+
+<script> //here comes the code
+
+    //gloabal variables
+    var renderer;
+    var scene;
+    var camera;
+    var cameraControl;
+    var elements = 3000;
+    var objContainer = new Array(elements);
+    var rotationSpeed = 0.008;
+    var isTweening = false;
+
+    function init(){ //Three.js initialization code
+        //Object is the container that will hold all objects which we want to render
+        scene = new THREE.Scene();
+
+        //Three.JS Object which renders the THREE.Scene
+        renderer =  new THREE.WebGLRenderer();
+        renderer.setClearColor(0x000000, 1.0);
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMapEnabled = true;
+
+        //THREE.PerspectiveCamera determines what we see
+        camera = new THREE.PerspectiveCamera(45, window.innerWidth / window.innerHeight, 0.1, 5000);
+        camera.position.x = 250;
+        camera.position.y = 250;
+        camera.position.z = 250;
+        camera.lookAt(scene.position);
+
+        cameraControl = new THREE.OrbitControls(camera);
+
+        //Create Spotlight
+        var spotLight = new THREE.SpotLight(0xffffff);
+        spotLight.position.set(10, 20, 20);
+        spotLight.castShadow = true;
+        scene.add(spotLight);
+
+
+        //Create Random Cubes
+        var cubeGeometry = new THREE.BoxGeometry(10, 10, 10);
+        for (var i = 0; i < elements; i ++) {
+            var object = new THREE.Mesh(cubeGeometry, new THREE.MeshBasicMaterial( { color: Math.random() * 0xffffff, transparent: true, opacity: 0.6 } ) );
+            object.position.x = Math.random() * 500;
+            object.position.y = Math.random() * 500;
+            object.position.z = Math.random() * 500;
+            object.rotation.x = Math.random() * Math.PI;
+            object.rotation.y = Math.random() * Math.PI;
+            object.rotation.z = Math.random() * Math.PI;
+
+            scene.add(object);
+            objContainer[i] = object;
+
+        }
+
+        control = new function(){
+            this.randomAnimation = function(){randAnimation()};
+        }
+
+        addControlGUI(control);
+
+        document.body.appendChild(renderer.domElement);
+        render();
+    }
+
+    function addControlGUI(controlObject){
+        var gui = new dat.GUI();
+        gui.add(controlObject,"randomAnimation");
+    }
+
+    function randAnimation(){
+        if(!isTweening) {
+            for (var i = 0; i < elements; i++) {
+                obj = objContainer[i];
+
+                new TWEEN.Tween(obj.position)
+                        .to({
+                            x: Math.random() * 500,
+                            y: Math.random() * 500,
+                            z: Math.random() * 500
+                        }, 5000)
+                        .easing(TWEEN.Easing.Elastic.Out)
+                        .start();
+            }
+        }
+    }
+
+    function render() {
+        for(var i=0; i<elements; i++){
+            objContainer[i].rotation.y+=rotationSpeed;
+        }
+        TWEEN.update();
+        cameraControl.update();
+        // render using requestAnimationFrame
+        renderer.render(scene, camera);
+        requestAnimationFrame(render);
+    }
+
+    window.onload = init; //calls init() function after the document is loaded
+</script>
+<body>
+</body>
+</html>
